@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Camera to Image API</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      background-color: #555;
+    }
+    .camera-container {
+      width: 66.67%;
+      height: 100%;
+      position: relative;
+    }
+    #video, img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #canvas {
+      display: none;
+    }
+    #loading {
+      display: none;
+      font-size: 18px;
+      color: #555;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      z-index: 20;
+    }
+    .circle-btn {
+      width: 60px;
+      height: 60px;
+      background-color: red;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .download-btn {
+      width: 60px;
+      height: 60px;
+      background-color: brown;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .circle-btn img {
+      width: 30px;
+      height: 30px;
+    }
+    .prompt-carousel {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 10%;
+      max-height: 60px;
+      background-color: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      border-radius: 5px;
+      padding: 5px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      z-index: 30;
+    }
+    .prompt-navigation {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+    .arrow-btn {
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    .arrow-btn:hover {
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    .prompt-display {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    #generated-image {
+      filter: blur(10px);
+      transition: filter 15s ease-in-out;
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .loader{
+    margin: 0 0 2em;
+    height: 100px;
+    width: 20%;
+    text-align: center;
+    padding: 1em;
+    margin: 0 auto 1em;
+    display: inline-block;
+    vertical-align: top;
+    }
+  </style>
+</head>
+<body>
+  <div class="camera-container">
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+    <img id="generated-image">
+    <div id="loading">
+        <div class="loader loader--style7" title="6">
+            <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+               width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 50 50;" xml:space="preserve">
+              <rect x="0" y="0" width="4" height="20" fill="#333">
+                <animate attributeName="opacity" attributeType="XML"
+                  values="1; .2; 1" 
+                  begin="0s" dur="0.6s" repeatCount="indefinite" />
+              </rect>
+              <rect x="7" y="0" width="4" height="20" fill="#333">
+                <animate attributeName="opacity" attributeType="XML"
+                  values="1; .2; 1" 
+                  begin="0.2s" dur="0.6s" repeatCount="indefinite" />
+              </rect>
+              <rect x="14" y="0" width="4" height="20" fill="#333">
+                <animate attributeName="opacity" attributeType="XML"
+                  values="1; .2; 1" 
+                  begin="0.4s" dur="0.6s" repeatCount="indefinite" />
+              </rect>
+            </svg>
+          </div>
+    </div>
+  </div>
+
+  <div class="prompt-carousel">
+    <div class="prompt-navigation">
+      <button class="arrow-btn" id="left-arrow">&#9664;</button>
+      <div class="prompt-display" id="prompt-display">1</div>
+      <button class="arrow-btn" id="right-arrow">&#9654;</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="download-btn" id="download">
+    
+    <!--<img src="" alt="Download">-->
+      <p>Download</p>
+    </button>
+    <button class="circle-btn" id="capture-generate"></button>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const loadingDiv = document.getElementById('loading');
+    const generatedImage = document.getElementById('generated-image');
+    const captureGenerateButton = document.getElementById('capture-generate');
+    const downloadButton = document.getElementById('download');
+    const promptDisplay = document.getElementById('prompt-display');
+    const leftArrow = document.getElementById('left-arrow');
+    const rightArrow = document.getElementById('right-arrow');
+
+    ////////////////////////// Prompts mapping//////////////////////////////////
+    const prompts = [
+      "A fusion of Impressionist and Cyberpunk styles, where soft, painterly brushstrokes meet the neon-lit, high-tech atmosphere of a futuristic cityscape. The colors shift between warm, glowing hues and stark, electric tones, creating a sense of both nostalgic beauty and cutting-edge technology.",
+      "A painting-style image rendered with thick, textured brushstrokes. The colors are rich and deep, creating a sense of depth and dimension, while the overall composition has an artistic and painterly feel.",
+      "A double exposure image blending two distinct scenes, with one layer of nature and another of a city skyline. The images overlap softly, creating a dreamlike and surreal effect, with light and shadow merging across both elements.",
+      "A surrealist scene with floating objects and impossible structures. The lighting and colors are soft and dreamlike, creating an otherworldly, fantastical atmosphere where reality bends and distorts.",
+      "A minimalist scene with clean lines, simple shapes, and neutral colors. The composition features an abundance of negative space, focusing on only a few key elements. The overall feel is calm and uncluttered, with a soft, serene atmosphere."
+    ];
+    let currentPromptIndex = 0;
+
+    // Update prompt display
+    function updatePromptDisplay() {
+      promptDisplay.textContent = currentPromptIndex + 1;
+    }
+
+    // Arrow navigation
+    leftArrow.addEventListener('click', () => {
+      currentPromptIndex = (currentPromptIndex - 1 + prompts.length) % prompts.length;
+      updatePromptDisplay();
+    });
+
+    rightArrow.addEventListener('click', () => {
+      currentPromptIndex = (currentPromptIndex + 1) % prompts.length;
+      updatePromptDisplay();
+    });
+
+    // Initial display
+    updatePromptDisplay();
+
+    // Request camera access
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(error => {
+        console.error('Error accessing camera:', error);
+      });
+
+    let generatedImageUrl = null;
+
+    // Capture and generate image
+    captureGenerateButton.addEventListener('click', async () => {
+      // Show loading screen
+      loadingDiv.style.display = 'block';
+      video.style.display = 'none';
+
+      // Capture photo
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert canvas to image blob
+      const imageData = canvas.toDataURL('image/jpeg');
+      const blob = await (await fetch(imageData)).blob();
+
+      // Prepare data for API call
+      const formData = new FormData();
+      formData.append('prompt', prompts[currentPromptIndex]);
+      formData.append('mode', 'image-to-image');
+      formData.append('strength', '0.7'); // Adjust strength as needed
+      formData.append('output_format', 'jpeg');
+      formData.append('image', blob);
+
+      try {
+        const response = await fetch('https://api.stability.ai/v2beta/stable-image/generate/sd3', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer sk-artpidiuPviNno3KetApYqjgcS3Chz8nzHij0SdjFBzwBB86', // Replace with your API key
+            'Accept': 'image/*'
+          },
+          body: formData
+        });
+
+        if (response.status === 200) {
+          const arrayBuffer = await response.arrayBuffer();
+          const resultBlob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+          generatedImageUrl = URL.createObjectURL(resultBlob);
+
+          generatedImage.src = generatedImageUrl;
+          generatedImage.style.display = 'block';
+          setTimeout(() => {
+            generatedImage.style.filter = 'blur(0px)';
+          }, 100);
+
+          loadingDiv.style.display = 'none';
+        } else {
+          const errorText = await response.text();
+          throw new Error(`${response.status}: ${errorText}`);
+        }
+      } catch (error) {
+        console.error('Error generating image:', error);
+        alert('Failed to generate image. See console for details.');
+      } finally {
+        loadingDiv.style.display = 'none';
+      }
+    });
+
+    // Download and retake
+    downloadButton.addEventListener('click', () => {
+      if (generatedImageUrl) {
+        const a = document.createElement('a');
+        a.href = generatedImageUrl;
+        a.download = 'generated-image.jpg';
+        a.click();
+        URL.revokeObjectURL(generatedImageUrl); // Cleanup
+      }
+
+      // Reset by overlaying the video
+      generatedImage.style.display = 'none';
+      video.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
