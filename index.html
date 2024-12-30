@@ -231,13 +231,17 @@
     updatePromptDisplay();
 
     // Request camera access
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      .then(stream => {
-        video.srcObject = stream;
-      })
-      .catch(error => {
-        console.error('Error accessing camera:', error);
-      });
+    navigator.mediaDevices.getUserMedia({
+        audio: false, // 確保音頻關閉
+        video: { facingMode: 'environment' } // 使用後置攝像頭
+    })
+        .then(stream => {
+            video.srcObject = stream;
+        })
+        .catch(error => {
+            console.error('Error accessing camera:', error);
+            alert('Unable to access the camera. Please check your permissions and HTTPS setup.');
+        });
 
     let generatedImageUrl = null;
 
