@@ -140,6 +140,13 @@
       display: inline-block;
       vertical-align: top;
     }
+    #video {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* 确保视频内容适应容器 */
+        background-color: black; /* 增加对比度以检查显示 */
+    }
   </style>
 </head>
 <body>
@@ -201,11 +208,11 @@
 
     // Prompts mapping
     const prompts = [
-      "A fusion of Impressionist and Cyberpunk styles, where soft, painterly brushstrokes meet the neon-lit, high-tech atmosphere of a futuristic cityscape.",
-      "A painting-style image rendered with thick, textured brushstrokes.",
-      "A double exposure image blending two distinct scenes.",
-      "A surrealist scene with floating objects and impossible structures.",
-      "A minimalist scene with clean lines, simple shapes, and neutral colors."
+      "A surrealist scene with floating objects and impossible structures. The lighting and colors are soft and dreamlike, creating an otherworldly, fantastical atmosphere where reality bends and distorts.",
+      "A double exposure image blending two distinct scenes, with one layer of nature and another of a city skyline. The images overlap softly, creating a dreamlike and surreal effect, with light and shadow merging across both elements.",
+      "A painting-style image rendered with thick, textured brushstrokes. The colors are rich and deep, creating a sense of depth and dimension, while the overall composition has an artistic and painterly feel.",
+      "A fusion of Impressionist and Cyberpunk styles, where soft, painterly brushstrokes meet the neon-lit, high-tech atmosphere of a futuristic cityscape. The colors shift between warm, glowing hues and stark, electric tones, creating a sense of both nostalgic beauty and cutting-edge technology.",
+      "A photograph styled like an Impressionist painting, where light and color blend fluidly. The scene is bathed in warm, diffused lighting, with soft, visible brushstrokes and a dreamlike atmosphere. The image captures a fleeting moment with vibrant, yet gentle hues that create a sense of movement and life."
     ];
     let currentPromptIndex = 0;
 
@@ -230,17 +237,24 @@
 
     // Start camera
     async function startCamera() {
-      try {
+    try {
+        console.log('Requesting camera access...');
         stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: { facingMode: 'environment' }
+        audio: false,
+        video: { facingMode: 'environment' }
         });
+        console.log('Camera stream obtained:', stream);
         video.srcObject = stream;
-        renderToCanvas();
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        alert('Unable to access the camera. Please check permissions and try again.');
-      }
+        video.play(); // 确保视频播放
+    } catch (error) {
+        console.error('Error accessing camera:', error.message);
+        alert('Unable to access the camera. Please check permissions and HTTPS setup.');
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Your browser does not support camera access. Please use a modern browser.');
+        return;
+    }
+
     }
 
     // Stop camera
@@ -341,6 +355,12 @@
     // 在页面加载完成后启动摄像头
     document.addEventListener('DOMContentLoaded', async () => {
     await startCamera();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            startCamera();
+        }, 500); // 延迟 500ms
     });
 
   </script>
